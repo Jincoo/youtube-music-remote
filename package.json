@@ -1,0 +1,24 @@
+{
+  "name": "youtube-music-remote",
+  "version": "1.0.0",
+  "description": "PC와 모바일 간 YouTube Music 원격 제어",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "youtube-music",
+    "remote-control",
+    "websocket",
+    "chrome-extension"
+  ],
+  "dependencies": {
+    "ws": "^8.14.2",
+    "express": "^4.18.2",
+    "qrcode": "^1.5.3"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

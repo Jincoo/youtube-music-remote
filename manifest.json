@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Music Remote Control",
+  "version": "1.0",
+  "description": "PC와 모바일 간 YouTube Music 원격 제어",
+  
+  "permissions": [
+    "activeTab",
+    "storage",
+    "webRequest"
+  ],
+  
+  "host_permissions": [
+    "https://music.youtube.com/*"
+  ],
+  
+  "background": {
+    "service_worker": "background.js"
+  },
+  
+  "content_scripts": [
+    {
+      "matches": ["https://music.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "YouTube Music Remote"
+  }
+}

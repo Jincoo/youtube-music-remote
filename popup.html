@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #ff0000, #cc0000);
+      color: white;
+      margin: 0;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .status-card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      backdrop-filter: blur(10px);
+    }
+    
+    .song-info {
+      margin-bottom: 15px;
+    }
+    
+    .song-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .song-artist {
+      font-size: 12px;
+      opacity: 0.8;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .control-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s ease;
+    }
+    
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.05);
+    }
+    
+    .control-btn.play-pause {
+      width: 50px;
+      height: 50px;
+      font-size: 20px;
+    }
+    
+    .progress-container {
+      margin-bottom: 10px;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: white;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    
+    .time-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      opacity: 0.8;
+      margin-top: 5px;
+    }
+    
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .volume-icon {
+      font-size: 14px;
+    }
+    
+    .volume-slider {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
+      outline: none;
+      appearance: none;
+    }
+    
+    .volume-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+    }
+    
+    .connection-status {
+      text-align: center;
+      font-size: 12px;
+      margin-top: 15px;
+      opacity: 0.8;
+    }
+    
+    .connected {
+      color: #4CAF50;
+    }
+    
+    .disconnected {
+      color: #f44336;
+    }
+    
+    .qr-container {
+      text-align: center;
+      margin-top: 15px;
+    }
+    
+    .qr-code {
+      background: white;
+      padding: 10px;
+      border-radius: 8px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    
+    .mobile-url {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      border-radius: 6px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>🎵 YouTube Music Remote</h2>
+  </div>
+  
+  <div class="status-card">
+    <div class="song-info">
+      <div class="song-title" id="songTitle">재생 중인 음악이 없습니다</div>
+      <div class="song-artist" id="songArtist">-</div>
+    </div>
+    
+    <div class="controls">
+      <button class="control-btn" id="prevBtn">⏮</button>
+      <button class="control-btn play-pause" id="playPauseBtn">▶</button>
+      <button class="control-btn" id="nextBtn">⏭</button>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="time-info">
+        <span id="currentTime">0:00</span>
+        <span id="totalTime">0:00</span>
+      </div>
+    </div>
+    
+    <div class="volume-container">
+      <span class="volume-icon">🔊</span>
+      <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
+    </div>
+  </div>
+  
+  <div class="connection-status">
+    <div id="connectionStatus" class="disconnected">연결 안됨</div>
+  </div>
+  
+  <div class="qr-container">
+    <div class="qr-code" id="qrCode">QR 코드</div>
+    <div class="mobile-url" id="mobileUrl">
+      모바일에서 접속: http://localhost:8080/mobile
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
