@@ -295,28 +295,70 @@
                 this.init();
             }
             
-            init() {
-                this.extractSessionId();
+            async init() {
+                // 간단하게 고정 세션 사용 - URL 파라미터 무시
+                this.sessionId = 'ytm_default_session';
+                console.log('🔗 고정 세션 ID 사용:', this.sessionId);
+                
+                // URL도 깔끔하게 정리
+                const newUrl = new URL(window.location);
+                newUrl.search = ''; // 모든 파라미터 제거
+                window.history.replaceState({}, '', newUrl);
+                
                 this.setupEventListeners();
                 this.connectWebSocket();
             }
             
-            extractSessionId() {
-                const urlParams = new URLSearchParams(window.location.search);
-                this.sessionId = urlParams.get('session');
-                
-                if (!this.sessionId) {
-                    this.showError('세션 ID가 없습니다. QR 코드를 다시 스캔해주세요.');
-                    return;
+            // 활성 PC 세션 찾기
+            async findPCSession() {
+                try {
+                    const response = await fetch('/api/pc-session');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        console.log('활성 PC 세션 발견:', data.sessionId);
+                        this.sessionId = data.sessionId;
+                        
+                        // URL 업데이트
+                        const newUrl = new URL(window.location);
+                        newUrl.searchParams.set('session', this.sessionId);
+                        window.history.replaceState({}, '', newUrl);
+                        
+                        return;
+                    }
+                } catch (error) {
+                    console.log('PC 세션 검색 실패:', error);
                 }
+                
+                // PC 세션을 찾지 못하면 URL에서 추출 시도
+                this.extractSessionId();
+            }
+            
+            extractSessionId() {
+                // 더 이상 사용하지 않음 - 고정 세션 사용
+                console.log('extractSessionId 호출됨 - 무시됨');
             }
             
             connectWebSocket() {
+                // 현재 접속한 서버의 IP 주소 사용
+                let serverHost = window.location.hostname;
+                let wsPort = 8081; // WebSocket 포트는 고정
+                
+                // localhost인 경우 처리
+                if (serverHost === 'localhost' || serverHost === '127.0.0.1') {
+                    serverHost = 'localhost';
+                }
+                
+                const wsUrl = `ws://${serverHost}:${wsPort}`;
+                
+                console.log('WebSocket 연결 시도:', wsUrl);
+                console.log('현재 페이지 위치:', window.location.href);
+                
                 try {
-                    this.ws = new WebSocket('ws://localhost:8081');
+                    this.ws = new WebSocket(wsUrl);
                     
                     this.ws.onopen = () => {
-                        console.log('WebSocket 연결됨');
+                        console.log('✅ WebSocket 연결 성공');
                         this.reconnectAttempts = 0;
                         this.updateConnectionStatus('연결됨', true);
                         this.registerDevice();
@@ -329,18 +371,18 @@
                     };
                     
                     this.ws.onclose = () => {
-                        console.log('WebSocket 연결 끊김');
+                        console.log('❌ WebSocket 연결 끊김');
                         this.updateConnectionStatus('연결 끊김', false);
                         this.reconnect();
                     };
                     
                     this.ws.onerror = (error) => {
-                        console.error('WebSocket 오류:', error);
-                        this.showError('서버 연결에 실패했습니다.');
+                        console.error('🚨 WebSocket 오류:', error);
+                        this.showError(`서버 연결 실패: ${wsUrl}`);
                     };
                 } catch (error) {
                     console.error('WebSocket 연결 실패:', error);
-                    this.showError('서버에 연결할 수 없습니다.');
+                    this.showError(`연결할 수 없습니다: ${wsUrl}`);
                     this.reconnect();
                 }
             }
@@ -360,36 +402,58 @@
             }
             
             registerDevice() {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.ws.send(JSON.stringify({
+                if (this.ws && this.ws.readyState === WebSocket.OPEN && this.sessionId) {
+                    const registerMessage = {
                         type: 'register',
                         sessionId: this.sessionId,
                         deviceType: 'mobile'
-                    }));
+                    };
+                    
+                    console.log('모바일 기기 등록:', registerMessage);
+                    this.ws.send(JSON.stringify(registerMessage));
+                } else {
+                    console.error('WebSocket 연결 안됨 또는 세션 ID 없음', {
+                        wsReady: this.ws?.readyState === WebSocket.OPEN,
+                        sessionId: this.sessionId
+                    });
                 }
             }
             
             handleMessage(message) {
-                console.log('메시지 수신:', message);
+                console.log('서버에서 메시지 수신:', message);
                 
                 switch (message.type) {
                     case 'registered':
-                        console.log('기기 등록 완료');
+                        console.log('✅ 기기 등록 완료');
+                        // 등록 완료되면 즉시 상태 요청
+                        this.requestCurrentStatus();
                         break;
                         
                     case 'status_update':
+                        console.log('📊 상태 업데이트 수신:', message);
                         this.updatePlayerUI(message);
                         break;
                         
                     case 'device_connected':
                         if (message.deviceType === 'pc') {
                             this.updateConnectionStatus('PC 연결됨', true);
+                            // PC 연결되면 상태 요청
+                            setTimeout(() => this.requestCurrentStatus(), 1000);
                         }
                         break;
                         
                     case 'device_disconnected':
                         if (message.deviceType === 'pc') {
                             this.updateConnectionStatus('PC 연결 끊김', false);
+                            this.hidePlayer();
+                        }
+                        break;
+                        
+                    case 'command_sent':
+                        if (message.success) {
+                            this.showTemporaryFeedback(`${message.command} 명령 실행됨`);
+                        } else {
+                            this.showError(message.error || '명령 실행 실패');
                         }
                         break;
                         
@@ -399,17 +463,68 @@
                 }
             }
             
+            // 현재 상태 요청
+            requestCurrentStatus() {
+                console.log('📊 PC 상태 요청');
+                this.sendCommand('get_status');
+            }
+            
+            // 플레이어 숨기기
+            hidePlayer() {
+                document.getElementById('playerCard').style.display = 'none';
+                document.getElementById('loadingMessage').style.display = 'block';
+                document.getElementById('loadingMessage').textContent = 'PC에서 YouTube Music 연결을 기다리는 중...';
+            }
+            
             sendCommand(type, data = {}) {
+                console.log('모바일에서 명령 전송:', type, data);
+                
                 if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.ws.send(JSON.stringify({
+                    const command = {
                         type: 'control_command',
                         sessionId: this.sessionId,
                         command: {
                             type: type,
                             ...data
                         }
-                    }));
+                    };
+                    
+                    console.log('WebSocket으로 전송:', command);
+                    this.ws.send(JSON.stringify(command));
+                    
+                    // 사용자 피드백
+                    this.showTemporaryFeedback(`${type} 명령 전송됨`);
+                } else {
+                    console.error('WebSocket 연결되지 않음');
+                    this.showError('서버에 연결되지 않았습니다.');
                 }
+            }
+            
+            // 임시 피드백 표시
+            showTemporaryFeedback(message) {
+                const feedback = document.createElement('div');
+                feedback.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 20px;
+                    font-size: 14px;
+                    z-index: 1000;
+                    transition: opacity 0.3s ease;
+                `;
+                feedback.textContent = message;
+                document.body.appendChild(feedback);
+                
+                setTimeout(() => {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(feedback);
+                    }, 300);
+                }, 1500);
             }
             
             setupEventListeners() {

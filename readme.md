@@ -1,42 +1,53 @@
-# YouTube Music Remote Control
+# 🎵 YouTube Music Remote Control
 
-PC와 모바일 간 YouTube Music 원격 제어를 위한 Chrome 확장 프로그램 + WebSocket 서버
+PC와 모바일 간 실시간 YouTube Music 원격 제어 시스템
 
-## 📋 현재 진행 상황
+## 📋 프로젝트 개요
 
-### ✅ 완료된 기능
-- Chrome 확장 프로그램 기본 구조 완성
-- WebSocket 서버 구현 완료 (Node.js)
-- YouTube Music 페이지에서 곡 정보 수집 (제목, 아티스트)
-- 모바일 웹 인터페이스 구현
-- 서버-클라이언트 통신 연결 완료
+### 🎯 목표
+집에서 PC로 YouTube Music을 재생할 때, 모바일 기기로 원격 제어할 수 있는 시스템 구축
+- ✅ 재생/일시정지 제어
+- ✅ 이전/다음 곡 제어  
+- ✅ 볼륨 조절
+- ✅ 진행률 표시 및 제어
+- ✅ 실시간 곡 정보 동기화
 
-### 🔧 현재 문제점
-1. **재생 상태 감지 이슈**: 음악이 재생 중이어도 `isPlaying: false`로 감지됨
-2. **진행률/볼륨 정보**: `progress: 0, duration: 0, volume: 50`으로 고정됨
-3. **DOM 선택자**: YouTube Music의 DOM 구조 변경으로 일부 요소 감지 실패
+### 🏗️ 시스템 구조
+```
+📱 모바일 웹앱  ←→  🖥️ WebSocket 서버  ←→  💻 Chrome 확장 프로그램
+                    (Node.js)              (YouTube Music)
+```
 
-### 🎯 해결 중인 사항
-- 비디오 요소(`<video>`)를 통한 더 정확한 재생 상태 감지
-- 다양한 DOM 선택자를 통한 요소 탐지 개선
-- 디버깅 로그 추가로 문제점 분석 중
+## 🚀 현재 작동 상태
 
-## 🏗️ 프로젝트 구조
+### ✅ 성공적으로 구현된 기능
+- **실시간 상태 감지**: 재생/정지, 곡 정보, 진행률 정확히 감지
+- **WebSocket 통신**: PC ↔ 서버 ↔ 모바일 실시간 연결
+- **원격 제어**: 모바일에서 PC 음악 제어 가능
+- **곡 정보 동기화**: 제목, 아티스트, 앨범 정보 실시간 표시
+- **진행률 표시**: 실시간 재생 위치 및 전체 길이 표시
+
+### 🔧 현재 알려진 이슈
+- **연결 안정성**: 모바일 연결이 간헐적으로 끊어지는 현상
+- **재생 상태 정확도**: 일부 상황에서 재생 상태 오감지
+
+## 📁 프로젝트 구조
 
 ```
 youtube-music-remote/
-├── manifest.json          # Chrome 확장 프로그램 설정
-├── content.js             # YouTube Music 페이지 제어 스크립트
-├── popup.html             # 확장 프로그램 팝업 UI
-├── popup.js               # 팝업 동작 스크립트
-├── background.js          # 백그라운드 서비스 워커
-├── server.js              # Node.js WebSocket 서버
-├── package.json           # Node.js 프로젝트 설정
-└── mobile/
-    └── index.html         # 모바일 원격 제어 페이지
+├── manifest.json              # Chrome 확장 프로그램 설정
+├── content.js                 # YouTube Music 페이지 제어 스크립트
+├── popup.html                 # 확장 프로그램 팝업 UI
+├── popup.js                   # 팝업 동작 스크립트
+├── background.js              # 백그라운드 서비스 워커
+├── server.js                  # Node.js WebSocket 서버
+├── package.json               # Node.js 프로젝트 설정
+├── mobile/
+│   └── index.html            # 모바일 원격 제어 페이지
+└── README.md                 # 프로젝트 문서
 ```
 
-## 🚀 설치 및 실행
+## 🛠️ 설치 및 실행
 
 ### 1. 의존성 설치
 ```bash
@@ -48,12 +59,16 @@ npm install ws express qrcode
 node server.js
 ```
 
-서버 실행 확인:
+예상 출력:
 ```
-YouTube Music Remote 서버 시작됨:
-- HTTP 서버: http://localhost:8080
-- WebSocket 서버: ws://localhost:8081
-- 모바일 접속: http://localhost:8080/mobile
+🚀 YouTube Music Remote 서버 시작됨:
+- 서버 IP: 192.168.1.100
+- PC에서 접속: http://localhost:8080
+- 모바일에서 접속: http://192.168.1.100:8080/mobile
+- WebSocket: ws://192.168.1.100:8081
+
+📱 모바일 브라우저에서 이 주소로 접속하세요:
+   http://192.168.1.100:8080/mobile
 ```
 
 ### 3. Chrome 확장 프로그램 설치
@@ -63,88 +78,156 @@ YouTube Music Remote 서버 시작됨:
 4. 프로젝트 폴더 선택
 
 ### 4. 사용 방법
-1. **PC**: YouTube Music 웹페이지에서 음악 재생
-2. **모바일**: `http://localhost:8080/mobile` 접속
-3. **제어**: 모바일에서 PC 음악 원격 제어
+1. **PC**: YouTube Music에서 음악 재생
+2. **모바일**: 서버에서 표시된 IP 주소로 접속
+3. **제어**: 모바일에서 PC 음악을 원격 제어!
 
-## 🔍 디버깅 정보
+## 🔧 기술 스택
 
-### 현재 서버 로그 상태
-- 세션 연결: ✅ 정상
-- 곡 정보 수집: ✅ 정상 ("Run (feat. YB)" by 리쌍 감지됨)
-- 재생 상태: ❌ 항상 `false`
-- 진행률: ❌ 항상 `0`
+### Frontend
+- **Vanilla JavaScript**: 확장 프로그램 및 모바일 인터페이스
+- **HTML5/CSS3**: 반응형 모바일 UI
+- **Chrome Extension API**: Manifest V3
 
-### 개발자 도구 확인 방법
-1. YouTube Music 페이지에서 F12
-2. Console 탭에서 다음 로그 확인:
-   - "YouTube Music Remote Controller 초기화됨"
-   - "WebSocket 연결됨"
-   - "YouTube Music 상태 수집" (디버깅 정보)
+### Backend
+- **Node.js**: 서버 런타임
+- **WebSocket (ws)**: 실시간 양방향 통신
+- **Express.js**: HTTP 서버
 
-## 🛠️ 기술 스택
+### 통신
+- **WebSocket**: PC ↔ 서버 ↔ 모바일 실시간 데이터 교환
+- **Chrome Extension Messages**: 확장 프로그램 내부 통신
 
-- **Frontend**: Vanilla JavaScript, HTML, CSS
-- **Backend**: Node.js, WebSocket (ws), Express
-- **Chrome Extension**: Manifest V3
-- **통신**: WebSocket 실시간 통신
+## 📊 개발 히스토리
 
-## 📱 주요 기능
+#### Phase 1: 기본 구조 구축
+- ✅ Chrome 확장 프로그램 기본 틀 구성
+- ✅ WebSocket 서버 구현
+- ✅ 모바일 웹 인터페이스 구현
 
-### 계획된 기능
-- [x] 곡 정보 표시 (제목, 아티스트)
-- [ ] 재생/일시정지 제어
-- [ ] 이전/다음 곡 제어
-- [ ] 볼륨 조절
-- [ ] 진행률 표시 및 제어
-- [ ] 실시간 상태 동기화
+#### Phase 2: 핵심 기능 구현
+- ✅ YouTube Music DOM 요소 감지 로직
+- ✅ 재생 상태 수집 (제목, 아티스트, 진행률)
+- ✅ 실시간 상태 동기화
 
-### 현재 작동하는 기능
-- Chrome 확장 프로그램 로드
-- WebSocket 서버 통신
-- 곡 정보 수집 (제목, 아티스트)
-- 모바일 UI 표시
+#### Phase 3: 원격 제어 구현
+- ✅ 모바일 → PC 제어 명령 전송
+- ✅ 재생/일시정지, 이전/다음 곡, 볼륨 조절
+- ✅ 비디오 요소 직접 제어로 정확도 향상
 
-## 🔧 알려진 이슈
+#### Phase 4: 네트워크 및 연결성
+- ✅ 로컬 네트워크 IP 자동 감지
+- ✅ 모바일 기기에서 PC 서버 접근
+- ✅ 세션 관리 및 기기 간 매칭
 
-1. **재생 상태 감지 실패**
-   - 증상: 음악 재생 중에도 `isPlaying: false`
-   - 원인: YouTube Music DOM 구조 변경으로 재생 버튼 감지 실패
-   - 해결책: 비디오 요소 직접 확인으로 변경 중
+### 해결한 주요 문제들
 
-2. **진행률 정보 부족**
-   - 증상: `progress: 0, duration: 0`
-   - 원인: 진행률 바 요소 선택자 불일치
-   - 해결책: 비디오 요소의 currentTime/duration 사용
+#### 1. DOM 선택자 이슈
+**문제**: YouTube Music의 동적 DOM 구조로 요소 감지 실패
+**해결**: 다양한 선택자 조합 + 비디오 요소 직접 접근
 
-3. **볼륨 정보 고정**
-   - 증상: 항상 `volume: 50`
-   - 원인: 볼륨 슬라이더 요소 감지 실패
+#### 2. 재생 상태 감지 정확도
+**문제**: aria-label 기반 감지의 불안정성
+**해결**: 비디오 요소의 `paused`, `currentTime` 속성 직접 확인
 
-## 🎯 다음 단계
+#### 3. 네트워크 연결 문제
+**문제**: 모바일에서 localhost 접근 불가
+**해결**: 로컬 네트워크 IP 자동 감지 및 서버 바인딩
 
-1. **재생 상태 수정**: 비디오 요소 기반 감지로 완전 전환
-2. **DOM 선택자 업데이트**: 최신 YouTube Music 구조에 맞춤
-3. **제어 기능 테스트**: 실제 재생/일시정지 등 동작 확인
-4. **모바일 UI 개선**: 더 나은 사용자 경험
-5. **에러 처리 강화**: 연결 실패 시 복구 메커니즘
+#### 4. WebSocket 포트 충돌
+**문제**: HTTP와 WebSocket 서버 포트 혼선
+**해결**: HTTP(8080), WebSocket(8081) 포트 분리
 
-## 📞 개발 히스토리
+#### 5. 세션 매칭 복잡성
+**문제**: PC와 모바일 간 세션 ID 불일치
+**해결**: 고정 세션 ID(`ytm_default_session`) 사용
 
-### 2025-07-31
-- 프로젝트 초기 설정 완료
-- Chrome 확장 프로그램 기본 구조 구현
-- WebSocket 서버 구현 및 테스트
-- 곡 정보 수집 기능 구현 (제목, 아티스트 정상 동작)
-- 재생 상태 감지 이슈 발견 및 해결 시도 중
+## 🎯 현재 작동 확인된 기능
 
-### 해결한 문제들
-- ✅ WebSocket 포트 불일치 (8080 → 8081)
-- ✅ Chrome 확장 프로그램 아이콘 오류
-- ✅ 서버-클라이언트 통신 연결
-- ✅ 곡 정보 수집 (제목, 아티스트)
+### PC측 (Chrome Extension)
+```javascript
+// 성공적으로 감지되는 정보
+{
+  isPlaying: true,
+  title: "너무 아픈 사랑은 사랑이 아니었음을",
+  artist: "김광석 • 김광석 다시부르기 2 • 1995년",
+  progress: 1.0238,
+  duration: 299,
+  volume: 15
+}
+```
 
-### 현재 작업 중
-- 🔧 재생 상태 정확한 감지
-- 🔧 진행률 및 볼륨 정보 수집
-- 🔧 실제 제어 기능 동작 확인
+### 모바일측 (Web Interface)
+- ✅ 실시간 곡 정보 표시
+- ✅ 재생/일시정지 버튼 동작
+- ✅ 진행률 바 표시
+- ✅ 볼륨 조절 가능
+
+### 서버측 (WebSocket)
+- ✅ PC 및 모바일 동시 연결
+- ✅ 실시간 메시지 중계
+- ✅ 세션 관리 및 상태 추적
+
+## 🚧 알려진 제한사항
+
+### 기술적 제한
+1. **YouTube Music 의존성**: YouTube Music의 DOM 구조 변경 시 업데이트 필요
+2. **로컬 네트워크 제한**: 같은 Wi-Fi 네트워크에서만 동작
+3. **Chrome 브라우저 전용**: Manifest V3 Chrome 확장 프로그램
+
+### 현재 버그
+1. **연결 안정성**: 모바일 WebSocket 연결이 간헐적으로 끊어짐
+2. **상태 동기화**: 빠른 곡 변경 시 일시적 정보 불일치
+
+## 🐛 문제 해결 가이드
+
+### 자주 발생하는 문제
+
+#### Q: 확장 프로그램이 YouTube Music을 감지하지 못해요
+**A**: 
+1. `music.youtube.com`에서 접속했는지 확인
+2. F12 → Console에서 오류 메시지 확인  
+3. 확장 프로그램 새로고침 시도
+
+#### Q: 모바일에서 연결이 안 돼요
+**A**:
+1. 서버가 실행 중인지 확인 (`node server.js`)
+2. PC와 모바일이 같은 Wi-Fi에 연결되어 있는지 확인
+3. 방화벽에서 8080, 8081 포트 허용 확인
+
+#### Q: 제어 버튼이 작동하지 않아요
+**A**:
+1. PC에서 음악이 실제로 재생 중인지 확인
+2. PC Console에서 명령 수신 로그 확인
+3. 페이지 새로고침 후 재시도
+
+### 디버깅 방법
+
+#### PC (Chrome DevTools)
+```
+F12 → Console에서 확인할 로그:
+- "🎵 YouTube Music Remote Controller 초기화됨"
+- "✅ WebSocket 연결됨"  
+- "🎮 모바일에서 원격 명령 수신"
+```
+
+#### 모바일 (브라우저 DevTools)
+```
+F12 → Console에서 확인할 로그:
+- "🔗 고정 세션 ID 사용: ytm_default_session"
+- "✅ WebSocket 연결 성공"
+- "📊 상태 업데이트 수신"
+```
+
+#### 서버 (터미널)
+```
+확인할 로그:
+- "✅ PC 연결됨"
+- "✅ MOBILE 연결됨"
+- "연결 상태: 🖥️ PC | 📱 Mobile"
+```
+
+
+**개발기간**: 2025년 8월 1일 (1일)  
+**개발상태**: Working Beta  
+**다음 업데이트**: 연결 안정성 개선 예정
