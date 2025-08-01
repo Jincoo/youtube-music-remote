@@ -420,7 +420,13 @@
             }
             
             handleMessage(message) {
-                console.log('서버에서 메시지 수신:', message);
+                // Heartbeat 응답 처리
+                if (message.type === 'heartbeat' || message.type === 'pong') {
+                    this.lastHeartbeat = Date.now();
+                    return;
+                }
+                
+                console.log('📨 서버에서 메시지 수신:', message);
                 
                 switch (message.type) {
                     case 'registered':

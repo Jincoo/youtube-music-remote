@@ -178,7 +178,7 @@ class YouTubeMusicRemoteServer {
     // WebSocket 서버를 로컬 네트워크에만 바인딩
     this.wss = new WebSocket.Server({ 
       port: this.port + 1,
-      host: '0.0.0.0'  // 일단 모든 IP에서 연결 허용 (나중에 IP 제한 추가 가능)
+      host: '0.0.0.0'
     });
     
     this.wss.on('connection', (ws, req) => {
@@ -192,9 +192,31 @@ class YouTubeMusicRemoteServer {
         return;
       }
       
+      // Heartbeat 설정
+      ws.isAlive = true;
+      ws.lastActivity = Date.now();
+      
+      // Ping 응답 처리
+      ws.on('pong', () => {
+        ws.isAlive = true;
+        ws.lastActivity = Date.now();
+        console.log('Pong 수신 - 연결 상태 양호');
+      });
+      
+      // 커스텀 heartbeat 메시지 처리
       ws.on('message', (data) => {
         try {
           const message = JSON.parse(data.toString());
+          
+          // Heartbeat 메시지 처리
+          if (message.type === 'ping') {
+            ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+            ws.lastActivity = Date.now();
+            return;
+          }
+          
+          // 일반 메시지 처리
+          ws.lastActivity = Date.now();
           this.handleMessage(ws, message);
         } catch (error) {
           console.error('메시지 파싱 오류:', error);
@@ -490,10 +512,58 @@ class YouTubeMusicRemoteServer {
     // IP 주소를 전역 변수에 저장 (모바일 페이지에서 사용)
     this.localIP = localIP;
     
-    // 정리 작업
+    // WebSocket 연결 상태 모니터링 (30초마다)
+    setInterval(() => {
+      this.monitorConnections();
+    }, 30000);
+    
+    // 세션 정리 (30초마다)
     setInterval(() => {
       this.cleanupSessions();
     }, 30000);
+    
+    // Heartbeat 전송 (15초마다)
+    setInterval(() => {
+      this.sendHeartbeat();
+    }, 15000);
+  }
+  
+  // 연결 상태 모니터링
+  monitorConnections() {
+    console.log('\n=== 연결 상태 점검 ===');
+    
+    this.wss.clients.forEach((ws) => {
+      if (!ws.isAlive) {
+        console.log('💀 응답 없는 연결 종료');
+        return ws.terminate();
+      }
+      
+      // 활동이 5분 이상 없으면 연결 확인
+      const inactiveTime = Date.now() - (ws.lastActivity || 0);
+      if (inactiveTime > 5 * 60 * 1000) {
+        console.log('⏰ 비활성 연결 감지 - Ping 전송');
+        ws.isAlive = false;
+        ws.ping();
+      }
+    });
+    
+    // 현재 연결 상태 출력
+    this.logConnectionStatus();
+  }
+  
+  // Heartbeat 전송
+  sendHeartbeat() {
+    const heartbeatMessage = JSON.stringify({
+      type: 'heartbeat',
+      timestamp: Date.now(),
+      server: 'youtube-music-remote'
+    });
+    
+    this.wss.clients.forEach((ws) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(heartbeatMessage);
+      }
+    });
   }
   
   cleanupSessions() {
