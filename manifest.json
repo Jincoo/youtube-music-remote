@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Music Remote Control",
-  "version": "1.1",
-  "description": "PC와 모바일 간 YouTube Music 원격 제어 (PWA 호환)",
+  "name": "YouTube Music Auto Remote",
+  "version": "2.0",
+  "description": "서버 없는 자동 네트워크 검색으로 YouTube Music 원격 제어",
   
   "permissions": [
     "activeTab",
     "storage",
-    "webRequest"
+    "tabs",
+    "scripting"
   ],
   
   "host_permissions": [
@@ -22,18 +23,17 @@
   "content_scripts": [
     {
       "matches": [
-        "https://music.youtube.com/*",
-        "https://*.youtube.com/music/*"
+        "https://music.youtube.com/*"
       ],
       "js": ["content.js"],
       "run_at": "document_end",
-      "all_frames": true
+      "all_frames": false
     }
   ],
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "YouTube Music Remote (PWA 지원)"
+    "default_title": "YouTube Music Auto Remote - 서버 없는 자동 연결"
   },
   
   "web_accessible_resources": [
@@ -41,5 +41,10 @@
       "resources": ["content.js"],
       "matches": ["https://music.youtube.com/*"]
     }
-  ]
+  ],
+  
+  "icons": {
+    "16": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjgiIGZpbGw9IiNGRjAwMDAiLz4KPHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHZpZXdCb3g9IjAgMCAxMCAxMCIgeD0iMyIgeT0iMyI+Cjxwb2x5Z29uIHBvaW50cz0iNCwyIDgsNSA0LDgiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo8L3N2Zz4=",
+    "32": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiNGRjAwMDAiLz4KPHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHZpZXdCb3g9IjAgMCAyMCAyMCIgeD0iNiIgeT0iNiI+Cjxwb2x5Z29uIHBvaW50cz0iOCw0IDE2LDEwIDgsMTYiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo8L3N2Zz4="
+  }
 }
