@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "YouTube Music Remote Control",
-  "version": "1.0",
-  "description": "PC와 모바일 간 YouTube Music 원격 제어",
+  "version": "1.1",
+  "description": "PC와 모바일 간 YouTube Music 원격 제어 (PWA 호환)",
   
   "permissions": [
     "activeTab",
@@ -11,7 +11,8 @@
   ],
   
   "host_permissions": [
-    "https://music.youtube.com/*"
+    "https://music.youtube.com/*",
+    "https://*.youtube.com/*"
   ],
   
   "background": {
@@ -20,14 +21,25 @@
   
   "content_scripts": [
     {
-      "matches": ["https://music.youtube.com/*"],
+      "matches": [
+        "https://music.youtube.com/*",
+        "https://*.youtube.com/music/*"
+      ],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   
   "action": {
     "default_popup": "popup.html",
-    "default_title": "YouTube Music Remote"
-  }
+    "default_title": "YouTube Music Remote (PWA 지원)"
+  },
+  
+  "web_accessible_resources": [
+    {
+      "resources": ["content.js"],
+      "matches": ["https://music.youtube.com/*"]
+    }
+  ]
 }

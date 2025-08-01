@@ -291,6 +291,8 @@
                 this.currentStatus = {};
                 this.reconnectAttempts = 0;
                 this.maxReconnectAttempts = 5;
+                this.volumeDebounce = null;
+                this.seekDebounce = null;
                 
                 this.init();
             }
@@ -333,6 +335,7 @@
                 // PC 세션을 찾지 못하면 URL에서 추출 시도
                 this.extractSessionId();
             }
+            
             
             extractSessionId() {
                 // 더 이상 사용하지 않음 - 고정 세션 사용
@@ -468,7 +471,221 @@
                         break;
                 }
             }
-            
+                            
+                sendCommand(type, data = {}) {
+                    console.log('모바일에서 명령 전송:', type, data);
+                    
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    const command = {
+                        type: 'control_command',
+                        sessionId: this.sessionId,
+                        command: {
+                        type: type,
+                        ...data
+                        }
+                    };
+                    
+                    console.log('WebSocket으로 전송:', command);
+                    this.ws.send(JSON.stringify(command));
+                    
+                    // 스마트 피드백 - 볼륨과 시간 이동은 조용하게
+                    if (type === 'volume') {
+                        this.showVolumeIndicator(data.value);
+                    } else if (type === 'seek') {
+                        this.showSeekIndicator(data.position);
+                    } else {
+                        // 재생/일시정지, 다음/이전 곡만 명시적 피드백
+                        this.showTemporaryFeedback(`${this.getCommandDisplayName(type)}`);
+                    }
+                    } else {
+                    console.error('WebSocket 연결되지 않음');
+                    this.showError('서버에 연결되지 않았습니다.');
+                    }
+                }
+                
+                // 명령어 표시명 변환
+                getCommandDisplayName(type) {
+                    const commandNames = {
+                    'play_pause': '⏯️',
+                    'next': '⏭️',
+                    'previous': '⏮️'
+                    };
+                    return commandNames[type] || type;
+                }
+                
+                // 볼륨 표시기 (조용한 피드백)
+                showVolumeIndicator(volume) {
+                    // 기존 표시기 제거
+                    const existing = document.querySelector('.volume-indicator');
+                    if (existing) existing.remove();
+                    
+                    // 새 표시기 생성
+                    const indicator = document.createElement('div');
+                    indicator.className = 'volume-indicator';
+                    indicator.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 25px;
+                    font-size: 18px;
+                    z-index: 1000;
+                    pointer-events: none;
+                    transition: opacity 0.3s ease;
+                    `;
+                    
+                    const volumeIcon = volume === 0 ? '🔇' : volume < 30 ? '🔉' : '🔊';
+                    indicator.innerHTML = `${volumeIcon} ${volume}%`;
+                    
+                    document.body.appendChild(indicator);
+                    
+                    // 1초 후 제거
+                    setTimeout(() => {
+                    indicator.style.opacity = '0';
+                    setTimeout(() => {
+                        if (indicator.parentNode) {
+                        indicator.parentNode.removeChild(indicator);
+                        }
+                    }, 300);
+                    }, 1000);
+                }
+                
+                // 시간 이동 표시기 (조용한 피드백)
+                showSeekIndicator(position) {
+                    // 기존 표시기 제거
+                    const existing = document.querySelector('.seek-indicator');
+                    if (existing) existing.remove();
+                    
+                    // 새 표시기 생성
+                    const indicator = document.createElement('div');
+                    indicator.className = 'seek-indicator';
+                    indicator.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 15px 25px;
+                    border-radius: 25px;
+                    font-size: 18px;
+                    z-index: 1000;
+                    pointer-events: none;
+                    transition: opacity 0.3s ease;
+                    `;
+                    
+                    indicator.innerHTML = `⏱️ ${this.formatTime(position)}`;
+                    
+                    document.body.appendChild(indicator);
+                    
+                    // 0.8초 후 제거 (더 빠르게)
+                    setTimeout(() => {
+                    indicator.style.opacity = '0';
+                    setTimeout(() => {
+                        if (indicator.parentNode) {
+                        indicator.parentNode.removeChild(indicator);
+                        }
+                    }, 300);
+                    }, 800);
+                }
+                
+                setupEventListeners() {
+                    // 재생/일시정지
+                    document.getElementById('playPauseBtn').addEventListener('click', () => {
+                    this.sendCommand('play_pause');
+                    });
+                    
+                    // 이전 곡
+                    document.getElementById('prevBtn').addEventListener('click', () => {
+                    this.sendCommand('previous');
+                    });
+                    
+                    // 다음 곡
+                    document.getElementById('nextBtn').addEventListener('click', () => {
+                    this.sendCommand('next');
+                    });
+                    
+                    // 볼륨 조절 - 디바운싱으로 연속 명령 방지
+                    const volumeSlider = document.getElementById('volumeSlider');
+                    volumeSlider.addEventListener('input', (e) => {
+                    // 이전 타이머 취소
+                    if (this.volumeDebounce) {
+                        clearTimeout(this.volumeDebounce);
+                    }
+                    
+                    // 300ms 지연 후 명령 전송 (연속 조작 방지)
+                    this.volumeDebounce = setTimeout(() => {
+                        this.sendCommand('volume', { value: parseInt(e.target.value) });
+                    }, 300);
+                    });
+                    
+                    // 진행률 바 조절 - 한 번의 클릭/터치만
+                    const progressContainer = document.getElementById('progressContainer');
+                    progressContainer.addEventListener('click', (e) => {
+                    const rect = progressContainer.getBoundingClientRect();
+                    const percent = (e.clientX - rect.left) / rect.width;
+                    const position = percent * (this.currentStatus.duration || 100);
+                    this.sendCommand('seek', { position: Math.floor(position) });
+                    });
+                    
+                    // 터치 기기용 진행률 바 드래그 (선택사항)
+                    let isDragging = false;
+                    
+                    progressContainer.addEventListener('touchstart', () => {
+                    isDragging = true;
+                    });
+                    
+                    progressContainer.addEventListener('touchmove', (e) => {
+                    if (!isDragging) return;
+                    e.preventDefault(); // 스크롤 방지
+                    });
+                    
+                    progressContainer.addEventListener('touchend', (e) => {
+                    if (!isDragging) return;
+                    isDragging = false;
+                    
+                    const touch = e.changedTouches[0];
+                    const rect = progressContainer.getBoundingClientRect();
+                    const percent = (touch.clientX - rect.left) / rect.width;
+                    const position = percent * (this.currentStatus.duration || 100);
+                    
+                    if (percent >= 0 && percent <= 1) {
+                        this.sendCommand('seek', { position: Math.floor(position) });
+                    }
+                    });
+                }
+                
+                // 기존 showTemporaryFeedback을 더 간결하게
+                showTemporaryFeedback(message) {
+                    const feedback = document.createElement('div');
+                    feedback.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 20px;
+                    font-size: 16px;
+                    z-index: 1000;
+                    transition: opacity 0.3s ease;
+                    pointer-events: none;
+                    `;
+                    feedback.textContent = message;
+                    document.body.appendChild(feedback);
+                    
+                    setTimeout(() => {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => {
+                        document.body.removeChild(feedback);
+                    }, 300);
+                    }, 1200);
+                }
+                
             // 현재 상태 요청
             requestCurrentStatus() {
                 console.log('📊 PC 상태 요청');
